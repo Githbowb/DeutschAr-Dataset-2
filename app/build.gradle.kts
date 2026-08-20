@@ -34,11 +34,25 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+        languageVersion = "2.0"
+        apiVersion = "2.0"
     }
     buildFeatures {
         compose = true
         buildConfig = true
     }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+    }
+}
+
+ksp {
+    arg("room.generateKotlin", "true")
 }
 
 dependencies {

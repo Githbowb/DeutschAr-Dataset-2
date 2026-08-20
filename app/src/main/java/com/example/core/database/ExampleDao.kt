@@ -18,5 +18,5 @@ interface ExampleDao {
     suspend fun insert(example: ExampleEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(examples: List<ExampleEntity>)
+    suspend fun insertAll(examples: List<ExampleEntity>): List<Long>
 }

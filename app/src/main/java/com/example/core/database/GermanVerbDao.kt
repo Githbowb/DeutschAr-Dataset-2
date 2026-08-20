@@ -30,5 +30,5 @@ interface GermanVerbDao {
     suspend fun insert(verb: GermanVerbEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertVerbs(verbs: List<GermanVerbEntity>)
+    suspend fun insertVerbs(verbs: List<GermanVerbEntity>): List<Long>
 }

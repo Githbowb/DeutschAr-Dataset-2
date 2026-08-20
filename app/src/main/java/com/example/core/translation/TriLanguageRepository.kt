@@ -27,13 +27,13 @@ class TriLanguageRepository(
             override suspend fun findByPlural(plural: String) = null
             override suspend fun getById(id: Long) = null
             override suspend fun insert(noun: GermanNounEntity) = 0L
-            override suspend fun insertNouns(nouns: List<GermanNounEntity>) {}
+            override suspend fun insertNouns(nouns: List<GermanNounEntity>): List<Long> = emptyList()
         },
         germanVerbDao = (wordRepository as? WordRepositoryImpl)?.verbDao ?: object : GermanVerbDao {
             override suspend fun findByInfinitive(infinitive: String) = null
             override suspend fun findByForm(verb: String) = null
             override suspend fun insert(verb: GermanVerbEntity) = 0L
-            override suspend fun insertVerbs(verbs: List<GermanVerbEntity>) {}
+            override suspend fun insertVerbs(verbs: List<GermanVerbEntity>): List<Long> = emptyList()
         },
         wordDao = (wordRepository as? WordRepositoryImpl)?.wordDao ?: object : WordDao {
             override suspend fun getById(id: Long) = null
@@ -48,7 +48,7 @@ class TriLanguageRepository(
             override suspend fun countWords() = 0
             override suspend fun insertWord(word: WordEntity) = 0L
             override suspend fun insert(word: WordEntity) = 0L
-            override suspend fun insertAll(words: List<WordEntity>) {}
+            override suspend fun insertAll(words: List<WordEntity>): List<Long> = emptyList()
         },
         mlKitTranslator = mlKitManager
     )

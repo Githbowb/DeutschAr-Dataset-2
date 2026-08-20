@@ -22,5 +22,5 @@ interface ConjugationDao {
     suspend fun insertConjugation(conjugation: ConjugationEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(conjugations: List<ConjugationEntity>)
+    suspend fun insertAll(conjugations: List<ConjugationEntity>): List<Long>
 }

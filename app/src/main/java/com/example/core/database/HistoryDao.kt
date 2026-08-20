@@ -29,14 +29,14 @@ interface HistoryDao {
     suspend fun insertHistory(history: HistoryEntity): Long
 
     @Update
-    suspend fun updateHistory(history: HistoryEntity)
+    suspend fun updateHistory(history: HistoryEntity): Int
 
     @Query("UPDATE history SET is_saved = :isSaved WHERE id = :id")
-    suspend fun updateSavedStatus(id: Long, isSaved: Boolean)
+    suspend fun updateSavedStatus(id: Long, isSaved: Boolean): Int
 
     @Query("DELETE FROM history WHERE id = :id")
-    suspend fun deleteHistoryById(id: Long)
+    suspend fun deleteHistoryById(id: Long): Int
 
     @Query("DELETE FROM history")
-    suspend fun clearHistory()
+    suspend fun clearHistory(): Int
 }

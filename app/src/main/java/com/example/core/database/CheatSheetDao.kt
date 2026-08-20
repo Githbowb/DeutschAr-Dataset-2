@@ -23,8 +23,8 @@ interface CheatSheetDao {
     suspend fun insertItem(entity: CheatSheetEntity): Long
 
     @Update
-    suspend fun updateItem(entity: CheatSheetEntity)
+    suspend fun updateItem(entity: CheatSheetEntity): Int
 
     @Delete
-    suspend fun deleteItem(entity: CheatSheetEntity)
+    suspend fun deleteItem(entity: CheatSheetEntity): Int
 }

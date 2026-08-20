@@ -21,5 +21,5 @@ interface GermanNounDao {
     suspend fun insert(noun: GermanNounEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertNouns(nouns: List<GermanNounEntity>)
+    suspend fun insertNouns(nouns: List<GermanNounEntity>): List<Long>
 }
