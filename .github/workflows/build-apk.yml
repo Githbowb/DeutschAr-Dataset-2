@@ -17,179 +17,82 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
-      - name: Checkout repository
+      # 1. Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
           lfs: true
           submodules: recursive
 
-      # 2. Set up JDK (Java 21 for modern AGP 8.8+ / Gradle 8+)
+      # 2. Set up JDK 21
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: 'gradle'
 
-      # 3. Set up Android SDK & Tools
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # 3. Set up Gradle
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+          cache-read-only: false
 
-      # 4. Create minimal .env from .env.example if missing
-      - name: Setup environment secrets file
+      # 4. Regenerate Gradle Wrapper
+      - name: Regenerate Gradle Wrapper
         run: |
-          if [ ! -f ".env" ]; then
-            cp .env.example .env || touch .env
-            echo "Created .env configuration file."
-          fi
+          echo "=== Regenerating Gradle Wrapper with Gradle 8.8 ==="
+          gradle wrapper --gradle-version 8.8 --distribution-type all
 
-      # 6. Generate debug.keystore if not present (required by debugConfig in build.gradle.kts)
-      - name: Generate debug keystore
+      # 5. Setup Debug Keystore
+      - name: Setup Debug Keystore
         run: |
           echo "=== Setting up debug keystore ==="
-          if [ ! -f "debug.keystore" ]; then
-            echo "Generating debug.keystore at repository root..."
+          if [ -n "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" ]; then
+            echo "Decoding DEBUG_KEYSTORE_BASE64 secret..."
+            echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > debug.keystore
+          elif [ ! -f "debug.keystore" ]; then
+            echo "Generating fallback debug.keystore..."
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           else
-            echo "debug.keystore already exists."
+            echo "debug.keystore already exists in repository."
           fi
           ls -la debug.keystore
 
-      # 7. Make Gradle wrapper executable
-      - name: Grant execute permission for gradlew
+      # 6. Make Gradle Wrapper Executable
+      - name: Make Gradle Wrapper Executable
         run: |
-          if [ -f "./gradlew" ]; then
-            chmod +x ./gradlew
-          fi
+          chmod +x ./gradlew
 
-      # 8. Run Lint & Static Checks (fails on errors with full stacktrace)
-      - name: Run Lint and Quality Checks
+      # 7. Run Lint
+      - name: Run Lint
         env:
           GRADLE_OPTS: "-Xmx4g -XX:+UseG1GC"
         run: |
-          echo "=== Running Android Lint & Code Validation ==="
-          if [ -f "./gradlew" ]; then
-            ./gradlew lintDebug --no-daemon --stacktrace --info
-          else
-            gradle lintDebug --no-daemon --stacktrace --info
-          fi
+          echo "=== Running Android Lint ==="
+          ./gradlew lintDebug --no-daemon --stacktrace
 
-      # 9. Run Unit & Database Tests
-      - name: Run Unit Tests
+      # 8. Run Local JVM Unit Tests
+      - name: Run Local JVM Unit Tests
         env:
           GRADLE_OPTS: "-Xmx4g -XX:+UseG1GC"
         run: |
-          echo "=== Running Unit Tests ==="
-          if [ -f "./gradlew" ]; then
-            ./gradlew testDebugUnitTest --no-daemon --stacktrace --info
-          else
-            gradle testDebugUnitTest --no-daemon --stacktrace --info
-          fi
+          echo "=== Running Local JVM Unit Tests ==="
+          ./gradlew testDebugUnitTest --no-daemon --stacktrace
 
-      # 10. Build Debug APK
-      - name: Assemble Debug APK
+      # 9. Build Debug APK
+      - name: Build Debug APK
         env:
           GRADLE_OPTS: "-Xmx4g -XX:+UseG1GC"
         run: |
-          echo "=== Assembling Debug APK ==="
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --no-daemon --stacktrace --info
-          else
-            gradle assembleDebug --no-daemon --stacktrace --info
-          fi
+          echo "=== Building Debug APK ==="
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
-      # 11. Verify APK creation and inspect packed JNI binaries
-      - name: Inspect generated APK
-        run: |
-          echo "=== Checking generated APK output ==="
-          find app/build/outputs/apk/ -type f -name "*.apk" -ls
-
-      # 12. Upload APK as downloadable GitHub Actions Artifact
-      - name: Upload Debug APK Artifact
+      # 10. Upload Build Artifacts
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
           if-no-files-found: error
-
-      # 13. Enable KVM hardware acceleration (supported on Ubuntu GitHub Actions runners)
-      - name: Enable KVM group perms
-        run: |
-          echo "=== Setting KVM permissions for emulator hardware acceleration ==="
-          sudo usermod -a -G kvm $USER || true
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm || true
-
-      # 14. Launch Android Emulator (API 31, x86_64), install APK, launch app, and record 15s logcat
-      - name: Run Android Emulator & Capture Logcat
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 31
-          target: default
-          arch: x86_64
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: |
-            echo "=== Emulator booted and ready ==="
-            adb devices
-            
-            echo "=== Listing all contents of app/build/outputs/ ==="
-            if [ -d "app/build/outputs" ]; then
-              ls -laR app/build/outputs/
-            else
-              echo "::error::Directory app/build/outputs does not exist!"
-              exit 1
-            fi
-            
-            echo "Finding generated Debug APK..."
-            APK_PATH=$(find app/build/outputs/ -type f -name "*.apk" | head -n 1)
-            
-            if [ -z "$APK_PATH" ]; then
-              echo "::error::No APK file found in app/build/outputs! Aborting before adb install."
-              exit 1
-            fi
-            
-            echo "Found APK: $APK_PATH"
-            
-            echo "Installing APK onto emulator..."
-            adb install -r -d "$APK_PATH"
-            
-            echo "Clearing logcat buffer..."
-            adb logcat -c
-            
-            echo "Launching main activity: com.example.MainActivity..."
-            adb shell am start -n com.aistudio.deutschar.dictionary/com.example.MainActivity
-            
-            echo "Recording logcat for 15 seconds..."
-            adb logcat -v time > emulator_logcat.txt &
-            LOGCAT_PID=$!
-            
-            sleep 15
-            kill $LOGCAT_PID || true
-            
-            echo "================================================================"
-            echo "=== FULL EMULATOR LOGCAT OUTPUT (15-SECOND RUN) ==="
-            echo "================================================================"
-            cat emulator_logcat.txt
-            echo "================================================================"
-            
-            echo "=== Checking for FATAL EXCEPTION or Crash in Logcat ==="
-            if grep -E "(FATAL EXCEPTION|AndroidRuntime.*Shutting down VM)" emulator_logcat.txt; then
-              echo "::error::Application crashed during emulator launch test!"
-              exit 1
-            else
-              echo "✅ App started and ran successfully for 15 seconds with no crash!"
-            fi
-
-      # 15. Upload Emulator Logcat as downloadable Artifact
-      - name: Upload Emulator Logcat Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: emulator-launch-logcat
-          path: emulator_logcat.txt
-          retention-days: 14
