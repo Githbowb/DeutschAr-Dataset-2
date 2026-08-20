@@ -1,5 +1,5 @@
 {
-  "name": "Deutsch-Arabisch",
+  "name": "DeutschAr",
   "description": "Comprehensive German-Arabic dictionary & neural translation app with spaced repetition and grammar tables.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

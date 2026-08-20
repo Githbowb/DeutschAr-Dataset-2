@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Deutsch-Arabisch"
+rootProject.name = "DeutschAr"
 include(":app")
