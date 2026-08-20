@@ -65,32 +65,38 @@ jobs:
 
       # 8. Run Lint & Static Checks (fails on errors with full stacktrace)
       - name: Run Lint and Quality Checks
+        env:
+          GRADLE_OPTS: "-Xmx4g -XX:+UseG1GC"
         run: |
           echo "=== Running Android Lint & Code Validation ==="
           if [ -f "./gradlew" ]; then
-            ./gradlew lintDebug --stacktrace --info
+            ./gradlew lintDebug --no-daemon --stacktrace --info
           else
-            gradle lintDebug --stacktrace --info
+            gradle lintDebug --no-daemon --stacktrace --info
           fi
 
       # 9. Run Unit & Database Tests
       - name: Run Unit Tests
+        env:
+          GRADLE_OPTS: "-Xmx4g -XX:+UseG1GC"
         run: |
           echo "=== Running Unit Tests ==="
           if [ -f "./gradlew" ]; then
-            ./gradlew testDebugUnitTest --stacktrace --info
+            ./gradlew testDebugUnitTest --no-daemon --stacktrace --info
           else
-            gradle testDebugUnitTest --stacktrace --info
+            gradle testDebugUnitTest --no-daemon --stacktrace --info
           fi
 
       # 10. Build Debug APK
       - name: Assemble Debug APK
+        env:
+          GRADLE_OPTS: "-Xmx4g -XX:+UseG1GC"
         run: |
           echo "=== Assembling Debug APK ==="
           if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace --info
+            ./gradlew assembleDebug --no-daemon --stacktrace --info
           else
-            gradle assembleDebug --stacktrace --info
+            gradle assembleDebug --no-daemon --stacktrace --info
           fi
 
       # 11. Verify APK creation and inspect packed JNI binaries
