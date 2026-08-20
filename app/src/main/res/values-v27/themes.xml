@@ -1,19 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base application dark theme -->
+    <!-- Application dark theme for API 27+ -->
     <style name="Theme.DeutschArabisch" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/dark_bg</item>
         <item name="android:colorBackground">@color/dark_bg</item>
         <item name="android:statusBarColor">@color/dark_bg</item>
         <item name="android:navigationBarColor">@color/dark_bg</item>
         <item name="android:windowLightStatusBar">false</item>
-    </style>
-
-    <!-- Splash Screen Theme (Android 12+ and Compat) -->
-    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/dark_bg</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
-        <item name="windowSplashScreenAnimationDuration">300</item>
-        <item name="postSplashScreenTheme">@style/Theme.DeutschArabisch</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 </resources>
