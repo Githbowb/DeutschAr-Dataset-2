@@ -35,14 +35,14 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.8'
+          gradle-version: '8.10.2'
           cache-read-only: false
 
       # 4. Regenerate Gradle Wrapper
       - name: Regenerate Gradle Wrapper
         run: |
-          echo "=== Regenerating Gradle Wrapper with Gradle 8.8 ==="
-          gradle wrapper --gradle-version 8.8 --distribution-type all
+          echo "=== Regenerating Gradle Wrapper with Gradle 8.10.2 ==="
+          gradle wrapper --gradle-version 8.10.2 --distribution-type all
 
       # 5. Setup Debug Keystore
       - name: Setup Debug Keystore
