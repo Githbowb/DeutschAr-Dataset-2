@@ -136,7 +136,19 @@ object DictionaryLexicon {
         LexiconEntry("sieben", null, null, "numeral", "ZAHLWORT / عدد", "سبعة (7)", "seven (7)"),
         LexiconEntry("acht", null, null, "numeral", "ZAHLWORT / عدد", "ثمانية (8)", "eight (8)"),
         LexiconEntry("neun", null, null, "numeral", "ZAHLWORT / عدد", "تسعة (9)", "nine (9)"),
-        LexiconEntry("zehn", null, null, "numeral", "ZAHLWORT / عدد", "عشرة (10)", "ten (10)")
+        LexiconEntry("zehn", null, null, "numeral", "ZAHLWORT / عدد", "عشرة (10)", "ten (10)"),
+
+        // ================= HIGH-FREQUENCY NOUNS & ESSENTIAL VOCABULARY =================
+        LexiconEntry("Kellner", "der", "Kellner", "noun", "NOMEN / اسم مذكر", "نادل / جرسون", "waiter / server", "Der Kellner bringt die Speisekarte.", "النادل يحضر قائمة الطعام."),
+        LexiconEntry("Kellnerin", "die", "Kellnerinnen", "noun", "NOMEN / اسم مؤنث", "نادلة / جرسونة", "waitress", "Die Kellnerin nimmt die Bestellung auf.", "النادلة تأخذ الطلب."),
+        LexiconEntry("Rechnung", "die", "Rechnungen", "noun", "NOMEN / اسم مؤنث", "فاتورة / حساب", "bill / check / invoice", "Die Rechnung, bitte!", "الحساب، من فضلك!"),
+        LexiconEntry("Speisekarte", "die", "Speisekarten", "noun", "NOMEN / اسم مؤنث", "قائمة طعام / منيو", "menu", "Könnten wir bitte die Speisekarte haben?", "هل يمكننا الحصول على قائمة الطعام من فضلك؟"),
+        LexiconEntry("Küche", "die", "Küchen", "noun", "NOMEN / اسم مؤنث", "مطبخ", "kitchen / cuisine", "Die Küche ist sehr modern.", "المطبخ حديث جداً."),
+        LexiconEntry("Zimmer", "das", "Zimmer", "noun", "NOMEN / اسم محايد", "غرفة / حجرة", "room", "Ich habe ein Zimmer im Hotel gebucht.", "حجزت غرفة في الفندق."),
+        LexiconEntry("Hotel", "das", "Hotels", "noun", "NOMEN / اسم محايد", "فندق", "hotel", "Das Hotel liegt im Stadtzentrum.", "الفندق يقع في وسط المدينة."),
+        LexiconEntry("Restaurant", "das", "Restaurants", "noun", "NOMEN / اسم محايد", "مطعم", "restaurant", "Wir essen heute im Restaurant.", "نحن نأكل اليوم في المطعم."),
+        LexiconEntry("Bahnhof", "der", "Bahnhöfe", "noun", "NOMEN / اسم مذكر", "محطة قطار", "train station", "Ich treffe dich am Bahnhof.", "سأقابلك في محطة القطار."),
+        LexiconEntry("Flughafen", "der", "Flughäfen", "noun", "NOMEN / اسم مذكر", "مطار", "airport", "Wir fahren jetzt zum Flughafen.", "نحن ذاهبون الآن إلى المطار.")
     )
 
     private val germanMap: Map<String, LexiconEntry> by lazy {

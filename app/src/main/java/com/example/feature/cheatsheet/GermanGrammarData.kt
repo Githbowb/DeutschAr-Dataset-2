@@ -57,7 +57,7 @@ object GermanGrammarData {
                 GrammarExample("Das Mädchen liest ein Buch.", "البنت تقرأ كتاباً.", "كلمة Mädchen محايد das لأنها منتهية بـ -chen للتصغير."),
                 GrammarExample("Die Hoffnung stirbt zuletzt.", "الأمل يموت آخراً.", "كلمة Hoffnung مؤنث die لأنها منتهية بـ -ung.")
             ),
-            egyptianStudentTips = listOf(
+            importantTips = listOf(
                 "💡 سر التفوق: متسميش الكلمة لوحدها أبداً! متقولش Tisch = ترابيزة، احفظها دايماً 'der Tisch'.",
                 "💡 متقيسش على العربي! الشمس في الألماني مؤنث (die Sonne) والقمر مذكر (der Mond).",
                 "💡 كل الكلمات المصغرة بـ -chen أو -lein بتاخد das حتى لو كانت شخص (das Mädchen)."
@@ -142,7 +142,7 @@ object GermanGrammarData {
                     explanation = "بعد حرف الجر mit بييجي دايماً داتيف، Bus مذكر أخد dem Bus."
                 )
             ),
-            egyptianStudentTips = listOf(
+            importantTips = listOf(
                 "💡 مفتاح الأكوزاتيف: احفظ إنه بيغير 'المذكر بس' (der -> den). المحايد والمؤنث والجمع زي الفاعل بالظبط.",
                 "💡 مفتاح الداتيف: المذكر والمحايد بياخدوا dem (تخيلهم توأم)، المؤنث بيتحول لـ der!",
                 "💡 ترتيب الضمائر مع فعل بياخد مفعولين: لو الاتنين ضمائر -> الأكوزاتيف قبل الداتيف (Ich gebe es ihm)."
@@ -213,7 +213,7 @@ object GermanGrammarData {
                     explanation = "الفعل aufstehen منفصل: الأصل steht في الموضع 2 والبادئة auf في آخر الجملة."
                 )
             ),
-            egyptianStudentTips = listOf(
+            importantTips = listOf(
                 "💡 احفظ كلمة 'ADUSO': دي 5 روابط بتعتبر في الموضع صفر ومش بتغير موقع الفعل (Aber, Denn, Und, Sondern, Oder).",
                 "💡 الفرق بين denn و weil: الاتنين معناهم 'لأن'، بس denn الفعل بعدها بيجي رقم 2، وweil بتشوط الفعل لآخر الجملة!",
                 "💡 قاعدة TeKaMoLo: رتب ظروفك (زمان -> سبب -> طريقة -> مكان) عشان جملتك تطلع ألمانية فصحى طبيعية."

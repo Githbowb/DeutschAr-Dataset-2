@@ -72,6 +72,38 @@ object AppStrings {
         AppLanguage.ENGLISH -> "English"
     }
 
+    fun searchPlaceholderForLang(sourceLang: String, appLang: AppLanguage): String = when (sourceLang) {
+        "de" -> when (appLang) {
+            AppLanguage.ARABIC -> "اكتب كلمة أو جملة ألمانية (Deutsch)..."
+            AppLanguage.ENGLISH -> "Type a German word or sentence..."
+        }
+        "en" -> when (appLang) {
+            AppLanguage.ARABIC -> "اكتب كلمة أو جملة إنجليزية (English)..."
+            AppLanguage.ENGLISH -> "Type an English word or sentence..."
+        }
+        "ar" -> when (appLang) {
+            AppLanguage.ARABIC -> "اكتب كلمة أو جملة عربية..."
+            AppLanguage.ENGLISH -> "Type an Arabic word or sentence..."
+        }
+        else -> searchPlaceholder(appLang)
+    }
+
+    fun translationTargetHint(sourceLang: String, appLang: AppLanguage): String = when (sourceLang) {
+        "de" -> when (appLang) {
+            AppLanguage.ARABIC -> "يترجم إلى: 🇪🇬 عربي + 🇬🇧 إنجليزي"
+            AppLanguage.ENGLISH -> "Translates to: 🇪🇬 Arabic + 🇬🇧 English"
+        }
+        "en" -> when (appLang) {
+            AppLanguage.ARABIC -> "يترجم إلى: 🇩🇪 ألماني + 🇪🇬 عربي"
+            AppLanguage.ENGLISH -> "Translates to: 🇩🇪 German + 🇪🇬 Arabic"
+        }
+        "ar" -> when (appLang) {
+            AppLanguage.ARABIC -> "يترجم إلى: 🇩🇪 ألماني + 🇬🇧 إنجليزي"
+            AppLanguage.ENGLISH -> "Translates to: 🇩🇪 German + 🇬🇧 English"
+        }
+        else -> ""
+    }
+
     fun emptyStateTitle(lang: AppLanguage): String = when (lang) {
         AppLanguage.ARABIC -> "القاموس والترجمة الفورية"
         AppLanguage.ENGLISH -> "Dictionary & Instant Translation"

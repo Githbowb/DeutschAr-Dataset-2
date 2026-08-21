@@ -33,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.ContentCopy
@@ -261,6 +262,7 @@ fun SearchScreen(
                         onNavigateToSettings = { viewModel.setSelectedTab("settings") },
                         onNavigateToCheatSheet = { viewModel.setSelectedTab("cheatsheet") },
                         onQueryChanged = { viewModel.onQueryChanged(it) },
+                        onSourceLanguageSelected = { viewModel.setSourceLanguage(it) },
                         onSearchClicked = { viewModel.onSearchClicked() },
                         onSuggestionSelected = { viewModel.onSuggestionSelected(it) },
                         onSelectKeyword = { keyword ->
@@ -333,6 +335,7 @@ fun DictionaryMainContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToCheatSheet: () -> Unit,
     onQueryChanged: (String) -> Unit,
+    onSourceLanguageSelected: (String) -> Unit,
     onSearchClicked: () -> Unit,
     onSuggestionSelected: (WordEntity) -> Unit,
     onSelectKeyword: (String) -> Unit,
@@ -359,10 +362,12 @@ fun DictionaryMainContent(
             )
         }
 
-        // Full Width Search Bar with Automatic Language Detection and Search Button
+        // Full Width Search Bar with Language Selector and Dedicated Search Button
         FullWidthSearchBar(
             query = uiState.query,
             lang = settingsState.appLanguage,
+            selectedSourceLanguage = uiState.sourceLanguage,
+            onSourceLanguageSelected = onSourceLanguageSelected,
             onQueryChanged = onQueryChanged,
             onSearchClicked = onSearchClicked
         )
@@ -576,12 +581,14 @@ fun DictionaryEmptyState(
 }
 
 /**
- * 3. Full-Width Search Bar with Automatic Language Detection and Dedicated Search Button
+ * 3. Full-Width Search Bar with Interactive Source Language Selector and Dedicated Search Button
  */
 @Composable
 fun FullWidthSearchBar(
     query: String,
     lang: AppLanguage = AppLanguage.ARABIC,
+    selectedSourceLanguage: String = "de",
+    onSourceLanguageSelected: (String) -> Unit,
     onQueryChanged: (String) -> Unit,
     onSearchClicked: () -> Unit,
     modifier: Modifier = Modifier
@@ -590,8 +597,9 @@ fun FullWidthSearchBar(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // Search Input Field & Dedicated Action Button
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -606,12 +614,17 @@ fun FullWidthSearchBar(
                     .testTag("search_text_input"),
                 placeholder = {
                     Text(
-                        text = AppStrings.searchPlaceholder(lang),
+                        text = AppStrings.searchPlaceholderForLang(selectedSourceLanguage, lang),
                         color = TextMuted,
-                        fontSize = 13.5.sp,
+                        fontSize = 13.sp,
                         fontFamily = if (lang == AppLanguage.ARABIC) CairoFontFamily else OutfitFontFamily
                     )
                 },
+                textStyle = TextStyle(
+                    fontSize = if (query.length > 50) 13.5.sp else 15.sp,
+                    fontFamily = if (query.any { it in '\u0600'..'\u06FF' }) CairoFontFamily else OutfitFontFamily,
+                    color = Color.White
+                ),
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -694,58 +707,145 @@ fun FullWidthSearchBar(
             }
         }
 
-        // Search hints pill row
-        Row(
+        // Interactive Language Selector Panel
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            shape = RoundedCornerShape(16.dp),
+            color = DarkCardBg,
+            border = androidx.compose.foundation.BorderStroke(1.dp, DarkCardBorder)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = DarkSubCardBg,
-                    border = androidx.compose.foundation.BorderStroke(0.8.dp, DarkBorder)
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Header Label
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "🇩🇪 Deutsch",
-                        fontSize = 10.sp,
-                        color = TextMuted,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        text = if (lang == AppLanguage.ARABIC) "اختر لغة الإدخال والبحث:" else "Select Input Language:",
+                        fontSize = 13.sp,
+                        fontFamily = if (lang == AppLanguage.ARABIC) CairoFontFamily else OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = DarkSubCardBg
+                    ) {
+                        Text(
+                            text = if (lang == AppLanguage.ARABIC) "🇩🇪 الافتراضي ألماني" else "🇩🇪 Default: German",
+                            fontSize = 11.sp,
+                            fontFamily = if (lang == AppLanguage.ARABIC) CairoFontFamily else OutfitFontFamily,
+                            color = PrimaryAccent,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = DarkSubCardBg,
-                    border = androidx.compose.foundation.BorderStroke(0.8.dp, DarkBorder)
+
+                // 3 Large, Highly Touchable Language Selector Buttons (Full Width Segmented Row)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "🇪🇬 عربي",
-                        fontSize = 10.sp,
-                        fontFamily = CairoFontFamily,
-                        color = TextMuted,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    val languages = listOf(
+                        Triple("de", "🇩🇪 ألماني", "🇩🇪 German"),
+                        Triple("en", "🇬🇧 إنجليزي", "🇬🇧 English"),
+                        Triple("ar", "🇪🇬 عربي", "🇪🇬 Arabic")
                     )
+
+                    languages.forEach { (code, arLabel, enLabel) ->
+                        val isSelected = selectedSourceLanguage.equals(code, ignoreCase = true)
+                        val label = if (lang == AppLanguage.ARABIC) arLabel else enLabel
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) PrimaryAccent else DarkSubCardBg,
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (isSelected) 1.5.dp else 1.dp,
+                                if (isSelected) PrimaryAccent else DarkBorder
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onSourceLanguageSelected(code) }
+                                .testTag("lang_btn_$code")
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                ) {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = DarkBg,
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .padding(end = 3.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = label,
+                                        fontSize = 13.sp,
+                                        fontFamily = if (lang == AppLanguage.ARABIC) CairoFontFamily else OutfitFontFamily,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        color = if (isSelected) DarkBg else Color(0xFFDDDDDD),
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
+
+                // Target Translation Hint Badge
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = DarkSubCardBg,
-                    border = androidx.compose.foundation.BorderStroke(0.8.dp, DarkBorder)
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    color = PrimaryAccent.copy(alpha = 0.12f),
+                    border = androidx.compose.foundation.BorderStroke(0.8.dp, PrimaryAccent.copy(alpha = 0.25f))
                 ) {
-                    Text(
-                        text = "🇬🇧 English",
-                        fontSize = 10.sp,
-                        color = TextMuted,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "⚡ " + AppStrings.translationTargetHint(selectedSourceLanguage, lang),
+                            fontSize = 12.sp,
+                            fontFamily = if (lang == AppLanguage.ARABIC) CairoFontFamily else OutfitFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryAccent
+                        )
+
+                        Text(
+                            text = when (selectedSourceLanguage) {
+                                "de" -> "DE ➔ AR + EN"
+                                "en" -> "EN ➔ DE + AR"
+                                "ar" -> "AR ➔ DE + EN"
+                                else -> ""
+                            },
+                            fontSize = 11.sp,
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryAccent.copy(alpha = 0.85f)
+                        )
+                    }
                 }
             }
-
-            Text(
-                text = if (lang == AppLanguage.ARABIC) "كشف اللغة تلقائي ⚡" else "Auto-detect language ⚡",
-                fontSize = 10.sp,
-                fontFamily = if (lang == AppLanguage.ARABIC) CairoFontFamily else OutfitFontFamily,
-                color = PrimaryAccent
-            )
         }
     }
 }
@@ -855,6 +955,7 @@ fun DetailedDynamicResultCard(
 
                 // Main Word + Article + POS Badge (Right)
                 Row(
+                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -883,12 +984,21 @@ fun DetailedDynamicResultCard(
                         }
                     }
 
+                    val dynamicFontSize = when {
+                        data.sourceText.length <= 12 -> 26.sp
+                        data.sourceText.length <= 22 -> 20.sp
+                        data.sourceText.length <= 35 -> 17.sp
+                        else -> 15.sp
+                    }
+
                     Text(
                         text = data.sourceText,
-                        fontSize = 28.sp,
-                        fontFamily = OutfitFontFamily,
+                        fontSize = dynamicFontSize,
+                        fontFamily = if (data.sourceText.any { it in '\u0600'..'\u06FF' }) CairoFontFamily else OutfitFontFamily,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
                     Surface(
@@ -1123,6 +1233,7 @@ fun DetailedWordCard(
 
                 // Word + Article + POS Badge (Right)
                 Row(
+                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -1151,12 +1262,21 @@ fun DetailedWordCard(
                         }
                     }
 
+                    val dynamicFontSize = when {
+                        word.germanWord.length <= 12 -> 26.sp
+                        word.germanWord.length <= 22 -> 20.sp
+                        word.germanWord.length <= 35 -> 17.sp
+                        else -> 15.sp
+                    }
+
                     Text(
                         text = word.germanWord,
-                        fontSize = 28.sp,
+                        fontSize = dynamicFontSize,
                         fontFamily = OutfitFontFamily,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
                     Surface(
@@ -1350,6 +1470,7 @@ fun DetailedTrilingualCard(
 
                 // German word + badge
                 Row(
+                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -1378,12 +1499,21 @@ fun DetailedTrilingualCard(
                         }
                     }
 
+                    val dynamicFontSize = when {
+                        result.german.length <= 12 -> 26.sp
+                        result.german.length <= 22 -> 20.sp
+                        result.german.length <= 35 -> 17.sp
+                        else -> 15.sp
+                    }
+
                     Text(
                         text = result.german,
-                        fontSize = 28.sp,
+                        fontSize = dynamicFontSize,
                         fontFamily = OutfitFontFamily,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
 
                     Surface(
@@ -1550,7 +1680,11 @@ fun DetailedSentenceCard(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 10.dp)
+                    ) {
                         Text(
                             text = if (direction == Direction.GERMAN_TO_ARABIC) "النص الأصلي (الألماني):" else "النص الأصلي (العربي):",
                             fontSize = 12.sp,
@@ -1559,11 +1693,19 @@ fun DetailedSentenceCard(
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
+                        val sourceFontSize = when {
+                            sourceText.length <= 60 -> 16.sp
+                            sourceText.length <= 120 -> 14.5.sp
+                            else -> 13.5.sp
+                        }
                         Text(
                             text = sourceText,
-                            fontSize = 16.sp,
+                            fontSize = sourceFontSize,
+                            lineHeight = (sourceFontSize.value * 1.35f).sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 8,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -1585,11 +1727,19 @@ fun DetailedSentenceCard(
                             color = SecondaryAccent.copy(alpha = 0.9f)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
+                        val englishFontSize = when {
+                            intermediateEnglish.length <= 60 -> 14.sp
+                            intermediateEnglish.length <= 120 -> 13.sp
+                            else -> 12.sp
+                        }
                         Text(
                             text = intermediateEnglish,
-                            fontSize = 14.sp,
+                            fontSize = englishFontSize,
+                            lineHeight = (englishFontSize.value * 1.35f).sp,
                             fontFamily = OutfitFontFamily,
-                            color = Color(0xFFCBD5E1)
+                            color = Color(0xFFCBD5E1),
+                            maxLines = 6,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -1641,7 +1791,9 @@ fun DetailedSentenceCard(
                     }
 
                     Column(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 10.dp),
                         horizontalAlignment = Alignment.End
                     ) {
                         Text(
@@ -1652,13 +1804,21 @@ fun DetailedSentenceCard(
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
+                        val targetFontSize = when {
+                            targetText.length <= 60 -> 18.sp
+                            targetText.length <= 120 -> 16.sp
+                            else -> 14.5.sp
+                        }
                         Text(
                             text = targetText,
-                            fontSize = 18.sp,
-                            fontFamily = CairoFontFamily,
+                            fontSize = targetFontSize,
+                            lineHeight = (targetFontSize.value * 1.4f).sp,
+                            fontFamily = if (targetText.any { it in '\u0600'..'\u06FF' }) CairoFontFamily else OutfitFontFamily,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryAccent,
-                            textAlign = TextAlign.End
+                            textAlign = TextAlign.End,
+                            maxLines = 8,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }

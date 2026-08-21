@@ -4,5 +4,5 @@
         android:width="160dp"
         android:height="160dp"
         android:gravity="center"
-        android:drawable="@drawable/splash_brand_logo_1787155918907" />
+        android:drawable="@drawable/ic_app_brand_logo_1787283930483" />
 </layer-list>

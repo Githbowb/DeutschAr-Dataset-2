@@ -281,8 +281,8 @@ private fun GrammarRuleCard(
                         }
                     }
 
-                    // 4. Egyptian Student Tips
-                    if (rule.egyptianStudentTips.isNotEmpty()) {
+                    // 4. Important Tips
+                    if (rule.importantTips.isNotEmpty()) {
                         Surface(
                             shape = RoundedCornerShape(14.dp),
                             color = AmberAccent.copy(alpha = 0.08f),
@@ -304,14 +304,14 @@ private fun GrammarRuleCard(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = "نصائح وتبسيط للطالب المصري:",
+                                        text = "نصائح مهمة:",
                                         fontFamily = CairoFontFamily,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = AmberAccent
                                     )
                                 }
-                                rule.egyptianStudentTips.forEach { tip ->
+                                rule.importantTips.forEach { tip ->
                                     Text(
                                         text = tip,
                                         fontFamily = CairoFontFamily,

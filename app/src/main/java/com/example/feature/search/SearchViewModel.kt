@@ -52,6 +52,24 @@ class SearchViewModel(
     }
 
     /**
+     * Updates the active input source language (German "de", English "en", Arabic "ar").
+     * Defaults to German "de".
+     * If user already entered text, immediately triggers search with the newly selected language.
+     */
+    fun setSourceLanguage(langCode: String) {
+        val validCode = when (langCode.lowercase()) {
+            "en", "english" -> "en"
+            "ar", "arabic" -> "ar"
+            else -> "de"
+        }
+        _uiState.update { it.copy(sourceLanguage = validCode) }
+        val currentQuery = _uiState.value.query.trim()
+        if (currentQuery.isNotEmpty()) {
+            performSearch(currentQuery)
+        }
+    }
+
+    /**
      * Called on every text change.
      * MANUAL SEARCH ONLY: Does NOT perform translation or database lookup on keystroke.
      * Only updates the input text and refreshes local autocomplete suggestions.
@@ -67,14 +85,21 @@ class SearchViewModel(
                 _uiState.update { it.copy(suggestions = words) }
             }
         } else {
-            val isArabic = newQuery.any { it in '\u0600'..'\u06FF' }
+            val selectedLang = _uiState.value.sourceLanguage
             viewModelScope.launch {
-                if (isArabic) {
-                    val matches = wordRepository.findWordsByArabic(newQuery.trim())
-                    _uiState.update { it.copy(suggestions = matches) }
-                } else {
-                    val matches = wordRepository.searchVocabulary(newQuery.trim())
-                    _uiState.update { it.copy(suggestions = matches) }
+                when (selectedLang) {
+                    "ar" -> {
+                        val matches = wordRepository.findWordsByArabic(newQuery.trim())
+                        _uiState.update { it.copy(suggestions = matches) }
+                    }
+                    "en" -> {
+                        val matches = wordRepository.searchVocabulary(newQuery.trim())
+                        _uiState.update { it.copy(suggestions = matches) }
+                    }
+                    else -> {
+                        val matches = wordRepository.searchVocabulary(newQuery.trim())
+                        _uiState.update { it.copy(suggestions = matches) }
+                    }
                 }
             }
         }
@@ -91,7 +116,7 @@ class SearchViewModel(
     }
 
     fun onSuggestionSelected(word: WordEntity) {
-        _uiState.update { it.copy(query = word.germanWord) }
+        _uiState.update { it.copy(query = word.germanWord, sourceLanguage = "de") }
         performSearch(word.germanWord)
     }
 
@@ -111,20 +136,17 @@ class SearchViewModel(
         searchJob = viewModelScope.launch {
             _uiState.update { it.copy(isTranslating = true, resultState = SearchResultState.Loading) }
 
-            // 1. Language Identification (FIRST STEP - Routing happens before any database query)
-            val detectedLang = LanguageDetector.detectLanguage(trimmed)
-            _uiState.update { it.copy(sourceLanguage = detectedLang) }
+            val sourceLang = _uiState.value.sourceLanguage.ifBlank { "de" }
 
             val nounDao = (wordRepository as? com.example.core.database.WordRepositoryImpl)?.nounDao
             val verbDao = (wordRepository as? com.example.core.database.WordRepositoryImpl)?.verbDao
             val exampleDao = (wordRepository as? com.example.core.database.WordRepositoryImpl)?.exampleDao
 
             try {
-                when (detectedLang) {
+                when (sourceLang) {
                     "de" -> {
                         // -------------------------------------------------------------
-                        // MATCHES DATABASE PRIMARY KEY LANGUAGE (German -> "de")
-                        // Perform exact-match lookup in the database directly
+                        // SOURCE: GERMAN -> TARGETS: ARABIC (Primary) + ENGLISH (Secondary)
                         // -------------------------------------------------------------
                         val exactMatch = wordRepository.findExactGermanWord(trimmed)
                         val lexiconEntry = DictionaryLexicon.findByGerman(trimmed)
@@ -263,9 +285,7 @@ class SearchViewModel(
 
                     "en" -> {
                         // -------------------------------------------------------------
-                        // NON-DATABASE LANGUAGE (English -> "en")
-                        // Route DIRECTLY to external translation engine (fallback)
-                        // No prior database lookup attempt
+                        // SOURCE: ENGLISH -> TARGETS: GERMAN (Primary) + ARABIC (Secondary)
                         // -------------------------------------------------------------
                         val rawGerman = try { mlKitTranslator.translateDirect(trimmed, "en", "de") } catch (_: Exception) { "" }
                         val germanTrans = sanitizeTranslation(rawGerman, trimmed, fallback = "Übersetzung")
@@ -273,26 +293,53 @@ class SearchViewModel(
                         val rawArabic = try { mlKitTranslator.translateDirect(trimmed, "en", "ar") } catch (_: Exception) { "" }
                         val arabicTrans = sanitizeTranslation(rawArabic, trimmed, fallback = "الترجمة")
 
+                        // Enrich with German database/lexicon if the German translation is found
+                        val exactMatch = wordRepository.findExactGermanWord(germanTrans)
+                        val lexiconEntry = DictionaryLexicon.findByGerman(germanTrans)
+                        val noun = nounDao?.findByLemma(germanTrans) ?: nounDao?.findByPlural(germanTrans)
+                        val verb = verbDao?.findByInfinitive(germanTrans) ?: verbDao?.findByForm(germanTrans)
+
+                        val isKnownVerb = verb != null || exactMatch?.verbData != null || VerbConjugator.isGermanVerb(germanTrans)
+                        val isKnownNoun = noun != null || exactMatch?.nounData != null || lexiconEntry?.article != null || !exactMatch?.word?.article.isNullOrBlank()
+
+                        val verbResult = if (isKnownVerb) {
+                            val inf = verb?.infinitive ?: exactMatch?.verbData?.infinitive ?: VerbConjugator.resolveInfinitive(germanTrans)
+                            VerbConjugator.createConjugation(
+                                infinitive = inf,
+                                verbEntity = verb ?: exactMatch?.verbData,
+                                english = trimmed,
+                                arabic = arabicTrans
+                            )
+                        } else null
+
+                        val nounData = if (isKnownNoun) (noun ?: exactMatch?.nounData) else null
+                        val article = if (isKnownNoun) (exactMatch?.word?.article ?: lexiconEntry?.article ?: noun?.article) else null
+                        val plural = if (isKnownNoun) (exactMatch?.word?.plural ?: lexiconEntry?.plural ?: noun?.nominativPlural) else null
+
                         val dynamicResult = DynamicTranslationResult(
                             sourceText = trimmed,
                             sourceLang = "en",
-                            wordType = null,
-                            article = null,
-                            plural = null,
+                            wordType = when {
+                                isKnownVerb -> "verb"
+                                isKnownNoun -> "noun"
+                                else -> null
+                            },
+                            article = article,
+                            plural = plural,
                             firstTargetLang = "de",
                             firstTargetTitle = "الترجمة الألمانية",
                             firstTranslation = germanTrans,
                             secondTargetLang = "ar",
                             secondTargetTitle = "الترجمة العربية",
                             secondTranslation = arabicTrans,
-                            verbData = null,
-                            nounData = null,
+                            verbData = verbResult,
+                            nounData = nounData,
                             examples = emptyList()
                         )
 
                         wordRepository.recordHistory(
                             query = trimmed,
-                            wordId = null,
+                            wordId = exactMatch?.word?.id?.takeIf { it > 0 },
                             resultType = "mlkit",
                             resultText = "$germanTrans / $arabicTrans",
                             sourceLanguage = "en",
@@ -304,37 +351,73 @@ class SearchViewModel(
 
                     "ar" -> {
                         // -------------------------------------------------------------
-                        // NON-DATABASE LANGUAGE (Arabic -> "ar")
-                        // Route DIRECTLY to external translation engine (fallback)
-                        // No prior database lookup attempt
+                        // SOURCE: ARABIC -> TARGETS: GERMAN (Primary) + ENGLISH (Secondary)
                         // -------------------------------------------------------------
-                        val rawEnglish = try { mlKitTranslator.translateDirect(trimmed, "ar", "en") } catch (_: Exception) { "" }
-                        val englishTrans = sanitizeTranslation(rawEnglish, trimmed, fallback = "Translation")
+                        val dbArabicMatch = wordRepository.findWordsByArabic(trimmed).firstOrNull()
 
-                        val rawGerman = try { mlKitTranslator.translateDirect(englishTrans, "en", "de") } catch (_: Exception) { "" }
-                        val germanTrans = sanitizeTranslation(rawGerman, trimmed, fallback = "Übersetzung")
+                        val englishTrans: String
+                        val germanTrans: String
+
+                        if (dbArabicMatch != null && dbArabicMatch.germanWord.isNotBlank()) {
+                            germanTrans = dbArabicMatch.germanWord
+                            val rawEng = try { mlKitTranslator.translateDirect(germanTrans, "de", "en") } catch (_: Exception) { "" }
+                            englishTrans = sanitizeTranslation(rawEng, germanTrans, fallback = "Translation")
+                        } else {
+                            val rawEnglish = try { mlKitTranslator.translateDirect(trimmed, "ar", "en") } catch (_: Exception) { "" }
+                            englishTrans = sanitizeTranslation(rawEnglish, trimmed, fallback = "Translation")
+
+                            val rawGerman = try { mlKitTranslator.translateDirect(englishTrans, "en", "de") } catch (_: Exception) { "" }
+                            germanTrans = sanitizeTranslation(rawGerman, trimmed, fallback = "Übersetzung")
+                        }
+
+                        // Enrich with German database/lexicon if the German translation is found
+                        val exactMatch = wordRepository.findExactGermanWord(germanTrans)
+                        val lexiconEntry = DictionaryLexicon.findByGerman(germanTrans)
+                        val noun = nounDao?.findByLemma(germanTrans) ?: nounDao?.findByPlural(germanTrans)
+                        val verb = verbDao?.findByInfinitive(germanTrans) ?: verbDao?.findByForm(germanTrans)
+
+                        val isKnownVerb = verb != null || exactMatch?.verbData != null || VerbConjugator.isGermanVerb(germanTrans)
+                        val isKnownNoun = noun != null || exactMatch?.nounData != null || lexiconEntry?.article != null || !exactMatch?.word?.article.isNullOrBlank()
+
+                        val verbResult = if (isKnownVerb) {
+                            val inf = verb?.infinitive ?: exactMatch?.verbData?.infinitive ?: VerbConjugator.resolveInfinitive(germanTrans)
+                            VerbConjugator.createConjugation(
+                                infinitive = inf,
+                                verbEntity = verb ?: exactMatch?.verbData,
+                                english = englishTrans,
+                                arabic = trimmed
+                            )
+                        } else null
+
+                        val nounData = if (isKnownNoun) (noun ?: exactMatch?.nounData) else null
+                        val article = if (isKnownNoun) (exactMatch?.word?.article ?: lexiconEntry?.article ?: noun?.article) else null
+                        val plural = if (isKnownNoun) (exactMatch?.word?.plural ?: lexiconEntry?.plural ?: noun?.nominativPlural) else null
 
                         val dynamicResult = DynamicTranslationResult(
                             sourceText = trimmed,
                             sourceLang = "ar",
-                            wordType = null,
-                            article = null,
-                            plural = null,
+                            wordType = when {
+                                isKnownVerb -> "verb"
+                                isKnownNoun -> "noun"
+                                else -> null
+                            },
+                            article = article,
+                            plural = plural,
                             firstTargetLang = "de",
                             firstTargetTitle = "الترجمة الألمانية",
                             firstTranslation = germanTrans,
                             secondTargetLang = "en",
                             secondTargetTitle = "English Translation",
                             secondTranslation = englishTrans,
-                            verbData = null,
-                            nounData = null,
+                            verbData = verbResult,
+                            nounData = nounData,
                             examples = emptyList()
                         )
 
                         wordRepository.recordHistory(
                             query = trimmed,
-                            wordId = null,
-                            resultType = "mlkit",
+                            wordId = exactMatch?.word?.id?.takeIf { it > 0 } ?: dbArabicMatch?.id?.takeIf { it > 0 },
+                            resultType = if (dbArabicMatch != null) "dictionary" else "mlkit",
                             resultText = "$germanTrans / $englishTrans",
                             sourceLanguage = "ar",
                             targetLanguage = "de"
@@ -352,9 +435,12 @@ class SearchViewModel(
                 }
             }
 
-            // Update suggestions only for German queries
-            if (detectedLang == "de") {
+            // Update suggestions based on selected source language
+            if (sourceLang == "de") {
                 val matches = wordRepository.searchVocabulary(trimmed)
+                _uiState.update { it.copy(suggestions = matches) }
+            } else if (sourceLang == "ar") {
+                val matches = wordRepository.findWordsByArabic(trimmed)
                 _uiState.update { it.copy(suggestions = matches) }
             } else {
                 _uiState.update { it.copy(suggestions = emptyList()) }

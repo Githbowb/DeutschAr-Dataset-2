@@ -9,7 +9,7 @@ data class GrammarRule(
     val explanations: List<GrammarExplanation>,
     val tables: List<GrammarTable> = emptyList(),
     val examples: List<GrammarExample> = emptyList(),
-    val egyptianStudentTips: List<String> = emptyList()
+    val importantTips: List<String> = emptyList()
 )
 
 data class GrammarExplanation(
